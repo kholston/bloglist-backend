@@ -62,6 +62,21 @@ describe('Blog API', () => {
 
     expect(testBlog.body.likes).toBe(0)
   })
+
+  test('undefined title and url returns bad request', async () => {
+    const noTitleNoUrl = {
+      author: 'Kal Rogers',
+      likes: 10
+    }
+
+    await api.post('/api/blogs')
+      .send(noTitleNoUrl)
+      .expect(400)
+
+    const blogsAtEnd = await helper.blogsInDb()
+
+    expect(blogsAtEnd).toHaveLength(helper.initialBlogs.length)
+  })
 })
 
 
