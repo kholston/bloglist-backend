@@ -47,7 +47,23 @@ describe('Blog API', () => {
     const contents = blogsAtEnd.map(blog => blog.title)
     expect(contents).toContain('Test Blog')
   })
+
+  test('undefined likes defaults to zero', async () => {
+    const blogMissingLikes = {
+      title: 'Test Blog',
+      author: 'Kal Rogers',
+      url: 'www.example.com',
+    }
+
+    const testBlog = await api.post('/api/blogs')
+      .send(blogMissingLikes)
+      .expect(200)
+      .expect('Content-Type', /application\/json/)
+
+    expect(testBlog.body.likes).toBe(0)
+  })
 })
+
 
 afterAll(() => {
   mongoose.connection.close()
