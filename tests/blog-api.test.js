@@ -19,8 +19,13 @@ beforeEach( async() => {
 describe('Blog API', () => {
   test('all blogs are returned', async () => {
     const response = await api.get('/api/blogs')
-
     expect(response.body).toHaveLength(helper.initialBlogs.length)
+  })
+
+  test('unique indentifier property is named "id"', async () => {
+    const response = await helper.blogsInDb()
+
+    expect(response[0].id).toBeDefined()
   })
 
 
