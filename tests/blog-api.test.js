@@ -93,6 +93,32 @@ describe('Blog API', () => {
     expect(contents).not.toContain(blogToDelete.title)
   })
 
+  test('a blog can be updated', async () => {
+    const blogsAtStart = await helper.blogsInDb()
+    const blogToUpdate = blogsAtStart[0]
+
+    console.log(blogToUpdate.id)
+
+    const updatedBlog = {
+      title: 'This Blog has been updated',
+      author: blogToUpdate.author,
+      url: blogToUpdate.url,
+      likes: 50
+    }
+
+    const returnedBlog = await api
+      .put(`/api/blogs/${blogToUpdate.id}`)
+      .send(updatedBlog)
+      .expect(200)
+      .expect('Content-Type', /application\/json/)
+
+    const blogsAtEnd = await helper.blogsInDb()
+    expect(blogsAtEnd).toHaveLength(helper.initialBlogs.length)
+
+    const contents = await blogsAtEnd.map(blog => blog)
+    expect(contents).toContainEqual(returnedBlog.body)
+
+  })
 })
 
 
