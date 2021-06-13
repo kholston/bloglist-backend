@@ -40,8 +40,17 @@ blogRouter.post('/', async (request, response) => {
 })
 
 blogRouter.delete('/:id', async (request, response) => {
-  await Blog.findByIdAndDelete(request.params.id)
-  response.status(204).end()
+  const blogToDelete = await Blog.findById(request.params.id)
+  console.log(blogToDelete)
+  const decodedToken = jwt.verify(request.token, process.env.SECRET)
+  console.log(decodedToken)
+
+  if(blogToDelete.user.toString()  !== decodedToken.id){
+    return response.status(401).json({ error: 'user credentials don\'t match blog creator' })
+  } else {
+    await Blog.findByIdAndDelete(request.params.id)
+    response.status(204).end()
+  }
 })
 
 blogRouter.put('/:id', async (request, response) => {
