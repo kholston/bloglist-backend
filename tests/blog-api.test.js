@@ -1,10 +1,21 @@
 const supertest = require('supertest')
 const mongoose = require('mongoose')
+const bcrypt = require('bcrypt')
 const helper = require('./test-helper')
 const Blog = require('../models/blog')
+const User = require('../models/user')
 const app = require('../app')
 
 const api = supertest(app)
+let token = ''
+
+beforeAll(async() => {
+  await User.deleteMany({})
+
+  const passwordHash = await bcrypt.hash('password', 10)
+  const user = new User({ username: 'root', name:'superuser',passwordHash })
+  await user.save()
+})
 
 beforeEach( async() => {
   await Blog.deleteMany({})
@@ -29,6 +40,13 @@ describe('Blog API', () => {
   })
 
   test('a valid blog can be added', async () => {
+    const userInfo = { username: 'root', password: 'password' }
+    const login = await api
+      .post('/api/login')
+      .send(userInfo)
+      .expect(200)
+      .expect('Content-Type', /application\/json/)
+
     const newBlog = {
       title: 'Test Blog',
       author: 'Kal Rogers',
@@ -37,6 +55,7 @@ describe('Blog API', () => {
     }
 
     await api.post('/api/blogs')
+      .set('Authorization', `Bearer ${login.body.token}`)
       .send(newBlog)
       .expect(200)
       .expect('Content-Type', /application\/json/)
@@ -49,13 +68,22 @@ describe('Blog API', () => {
   })
 
   test('undefined likes defaults to zero', async () => {
+    const userInfo = { username: 'root', password: 'password' }
+    const login = await api
+      .post('/api/login')
+      .send(userInfo)
+      .expect(200)
+      .expect('Content-Type', /application\/json/)
+
     const blogMissingLikes = {
       title: 'Test Blog',
       author: 'Kal Rogers',
       url: 'www.example.com',
     }
 
-    const testBlog = await api.post('/api/blogs')
+    const testBlog = await api
+      .post('/api/blogs')
+      .set('Authorization', `Bearer ${login.body.token}`)
       .send(blogMissingLikes)
       .expect(200)
       .expect('Content-Type', /application\/json/)
@@ -64,12 +92,20 @@ describe('Blog API', () => {
   })
 
   test('undefined title and url returns bad request', async () => {
+    const userInfo = { username: 'root', password: 'password' }
+    const login = await api
+      .post('/api/login')
+      .send(userInfo)
+      .expect(200)
+      .expect('Content-Type', /application\/json/)
+
     const noTitleNoUrl = {
       author: 'Kal Rogers',
       likes: 10
     }
 
     await api.post('/api/blogs')
+      .set('Authorization', `Bearer ${login.body.token}`)
       .send(noTitleNoUrl)
       .expect(400)
 
@@ -79,15 +115,37 @@ describe('Blog API', () => {
   })
 
   test('a blog can be deleted', async () => {
+    const userInfo = { username: 'root', password: 'password' }
+    const login = await api
+      .post('/api/login')
+      .send(userInfo)
+      .expect(200)
+      .expect('Content-Type', /application\/json/)
+
+    const blog = {
+      title: 'Test Blog',
+      author: 'Kal Rogers',
+      url: 'www.example.com',
+      likes: 10
+    }
+
+    const blogToDelete = await api
+      .post('/api/blogs')
+      .set('Authorization', `Bearer ${login.body.token}`)
+      .send(blog)
+      .expect(200)
+      .expect('Content-Type', /application\/json/)
+
     const blogsAtStart = await helper.blogsInDb()
-    const blogToDelete = blogsAtStart[0]
+    expect(blogsAtStart).toHaveLength(helper.initialBlogs.length + 1)
 
     await api
-      .delete(`/api/blogs/${blogToDelete.id}`)
+      .delete(`/api/blogs/${blogToDelete.body.id}`)
+      .set('Authorization', `Bearer ${login.body.token}`)
       .expect(204)
 
     const blogsAtEnd = await helper.blogsInDb()
-    expect(blogsAtEnd).toHaveLength(helper.initialBlogs.length - 1)
+    expect(blogsAtEnd).toHaveLength(helper.initialBlogs.length)
 
     const contents = blogsAtEnd.map(blog => blog.title)
     expect(contents).not.toContain(blogToDelete.title)
